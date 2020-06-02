@@ -24,6 +24,8 @@ router.get('/', async (req, res) => {
             assigner_name = null,
             assigner_surname = null,
             assigner_user_id = null,
+            page=1, 
+            limit=10,
             ...query
         } = req.query;
 
@@ -81,7 +83,9 @@ router.get('/', async (req, res) => {
                 model: User,
                 as: 'assignee',
                 where: queryAssignees 
-            }]
+            }],
+            offset: (page-1)*limit,
+            limit
         });
         return res.status(200).send({
             tasks

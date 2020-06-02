@@ -13,9 +13,7 @@ const router = express.Router();
  */
 router.get('/', async (req, res) => {
     try {
-        //name, body, status is in Project table
-        //score needs to be taken from Task
-        //assignee has to be taken from User from Task, im assuming that all task assignees which are associated 
+        //im assuming that all task assignees which are associated 
         //with a single project are assignees of that project
         var {
             score_gt = -1,
@@ -26,6 +24,8 @@ router.get('/', async (req, res) => {
             assigner_name = null,
             assigner_surname = null,
             assigner_user_id = null,
+            page=1, 
+            limit=10,
             ...query
         } = req.query;
 
@@ -39,6 +39,7 @@ router.get('/', async (req, res) => {
             var { score, ...query } = query;
         }
         taskQuery = {...taskQuery, score};
+
 
         const queryFromUsers = {
             assignee_name,
@@ -72,24 +73,39 @@ router.get('/', async (req, res) => {
                 }
             }
         }
-
+        console.log(queryAssigners)
         const projects = await Project.findAndCountAll({
             where: query,
             include: [{
                 model: Task,
                 as: 'tasks',
                 where: taskQuery,
-                include: [{
-                    model: User,
-                    as: 'assigner',
-                    where: queryAssigners 
-                },{
+                include: [{ //get assignees
                     model: User,
                     as: 'assignee',
                     where: queryAssignees 
                 }]
-            }]
+            }, {
+                model: User,
+                as: 'assigner',
+                where: queryAssigners
+            }],
+            offset: (page-1)*limit, 
+
+            // limit //error occurs if i include this due to some bug in sequelize
         });
+        
+        console.log(projects["rows"])
+        for (var project in projects["rows"]) { //average of scores
+            var scoreTotal = 0;
+            var taskCount = 0;
+            for (var task in project['tasks']) {
+                scoreTotal += task['score'];
+                taskCount++;
+            }
+            project = { ...project, average: scoreTotal/taskCount};
+        }
+
         return res.status(200).send({
             projects
         });
